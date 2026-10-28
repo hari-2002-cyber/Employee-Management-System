@@ -1,0 +1,455 @@
+
+<div class="dashboard">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">E</div>
+      <div>
+        <h2>EmployeeHub</h2>
+        <span>Employee Management System</span>
+      </div>
+    </div>
+    <div class="admin">Administrator</div>
+  </header>
+
+  <main class="content">
+    <section class="welcome">
+      <div>
+        <p class="eyebrow">WORKSPACE / EMPLOYEES</p>
+        <h1>Employee Management</h1>
+        <p class="subtitle">
+          Manage your people, their roles, and employee records.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="primary-btn"
+        (click)="openAddForm()"
+        [disabled]="saving || deleting">
+        + Add Employee
+      </button>
+    </section>
+
+    <!-- Dashboard Statistics -->
+    <div class="stats">
+      <div class="stat-card">
+        <span>Total Employees</span>
+        <strong>{{ employees.length }}</strong>
+        <small>All employee records</small>
+      </div>
+
+      <div class="stat-card">
+        <span>Active Employees</span>
+        <strong>{{ activeCount }}</strong>
+        <small>Currently active</small>
+      </div>
+
+      <div class="stat-card">
+        <span>Inactive Employees</span>
+        <strong>{{ inactiveCount }}</strong>
+        <small>Currently inactive</small>
+      </div>
+    </div>
+
+    <section class="table-card">
+      <div class="table-heading">
+        <div>
+          <h2>All Employees</h2>
+          <p>View and manage employee information.</p>
+        </div>
+
+        <div class="filter-controls">
+          <input
+            class="search"
+            type="search"
+            placeholder="Search employees..."
+            aria-label="Search employees"
+            [(ngModel)]="searchTerm"
+            [disabled]="loading">
+
+          <select
+            class="filter-select"
+            aria-label="Filter by department"
+            [(ngModel)]="departmentFilter"
+            [disabled]="loading">
+            <option value="">All Departments</option>
+            <option
+              *ngFor="let department of departments"
+              [value]="department">
+              {{ department }}
+            </option>
+          </select>
+
+          <select
+            class="filter-select"
+            aria-label="Filter by status"
+            [(ngModel)]="statusFilter"
+            [disabled]="loading">
+            <option value="">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+
+          <button
+            type="button"
+            class="cancel-btn"
+            *ngIf="searchTerm || departmentFilter || statusFilter"
+            (click)="clearFilters()">
+            Clear Filters
+          </button>
+        </div>
+      </div>
+
+      <!-- API Error Message -->
+      <div
+        class="error api-error"
+        *ngIf="errorMessage"
+        role="alert">
+        <span aria-hidden="true">⚠️</span>
+        <div class="error-content">
+          <strong>Something went wrong</strong>
+          <p>{{ errorMessage }}</p>
+        </div>
+        <button
+          type="button"
+          class="error-close"
+          aria-label="Dismiss error"
+          (click)="errorMessage = ''">
+          ×
+        </button>
+      </div>
+
+      <!-- Initial Loading State -->
+      <div
+        class="loading loading-state"
+        *ngIf="loading && employees.length === 0"
+        role="status"
+        aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Loading employees...</span>
+      </div>
+
+      <!-- Refreshing State when existing records are visible -->
+      <div
+        class="refresh-loading"
+        *ngIf="loading && employees.length > 0"
+        role="status"
+        aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        Refreshing employee records...
+      </div>
+
+      <!-- Employee Table -->
+      <div class="table-wrap" *ngIf="!loading || employees.length > 0">
+        <table>
+          <thead>
+            <tr>
+              <th>EMPLOYEE</th>
+              <th>DEPARTMENT</th>
+              <th>DESIGNATION</th>
+              <th>JOINING DATE</th>
+              <th>STATUS</th>
+              <th>ACTIONS</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let employee of filteredEmployees">
+              <td>
+                <div class="employee-name">
+                  <div class="avatar">
+                    {{ employee.name.charAt(0).toUpperCase() }}
+                  </div>
+                  <div>
+                    <strong>{{ employee.name }}</strong>
+                    <small>{{ employee.email }}</small>
+                  </div>
+                </div>
+              </td>
+
+              <td>{{ employee.department }}</td>
+              <td>{{ employee.designation }}</td>
+
+              <td>
+                {{ employee.joining_date | date:'dd MMM yyyy' }}
+              </td>
+
+              <td>
+                <span
+                  class="status"
+                  [class.active]="employee.status === 'Active'"
+                  [class.inactive]="employee.status === 'Inactive'">
+                  {{ employee.status }}
+                </span>
+              </td>
+
+              <td>
+                <div class="actions">
+                  <button
+                    type="button"
+                    class="edit-btn"
+                    [disabled]="saving || deleting || loading"
+                    (click)="openEditForm(employee)">
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    class="delete-btn"
+                    [disabled]="saving || deleting || loading"
+                    (click)="deleteEmployee(employee)">
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Empty State -->
+            <tr *ngIf="!loading && filteredEmployees.length === 0">
+              <td colspan="6" class="empty">
+                <div class="empty-icon">👥</div>
+                <strong>No employees found</strong>
+                <p>
+                  {{
+                    employees.length === 0
+                      ? 'No employee records are available yet.'
+                      : 'Try changing your search or filters.'
+                  }}
+                </p>
+                <button
+                  type="button"
+                  class="cancel-btn"
+                  *ngIf="searchTerm || departmentFilter || statusFilter"
+                  (click)="clearFilters()">
+                  Clear Filters
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Add/Edit Employee Modal -->
+    <div
+      class="modal-backdrop"
+      *ngIf="showForm"
+      (click)="closeForm()">
+
+      <section
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="employee-form-title"
+        (click)="$event.stopPropagation()">
+
+        <div class="modal-heading">
+          <div>
+            <h2 id="employee-form-title">
+              {{ editingId === null ? 'Add Employee' : 'Edit Employee' }}
+            </h2>
+            <p>Enter the employee details below.</p>
+          </div>
+
+          <button
+            type="button"
+            class="close-btn"
+            [disabled]="saving"
+            aria-label="Close form"
+            (click)="closeForm()">
+            ×
+          </button>
+        </div>
+
+        <form
+          (ngSubmit)="saveEmployee()"
+          #employeeForm="ngForm">
+
+          <div class="form-grid">
+            <label>
+              Full Name *
+              <input
+                name="name"
+                [(ngModel)]="form.name"
+                required
+                maxlength="100"
+                autocomplete="name">
+            </label>
+
+            <label>
+              Email Address *
+              <input
+                name="email"
+                type="email"
+                [(ngModel)]="form.email"
+                required
+                maxlength="150"
+                autocomplete="email">
+            </label>
+
+            <label>
+              Department *
+              <input
+                name="department"
+                [(ngModel)]="form.department"
+                required
+                maxlength="100">
+            </label>
+
+            <label>
+              Designation *
+              <input
+                name="designation"
+                [(ngModel)]="form.designation"
+                required
+                maxlength="100">
+            </label>
+
+            <label>
+              Joining Date *
+              <input
+                name="joining_date"
+                type="date"
+                [(ngModel)]="form.joining_date"
+                required>
+            </label>
+
+            <label>
+              Status *
+              <select
+                name="status"
+                [(ngModel)]="form.status"
+                required>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </label>
+          </div>
+
+          <!-- Save/Edit API Error -->
+          <div
+            class="error api-error"
+            *ngIf="errorMessage"
+            role="alert">
+            <span aria-hidden="true">⚠️</span>
+            <div class="error-content">
+              <strong>Unable to save employee</strong>
+              <p>{{ errorMessage }}</p>
+            </div>
+          </div>
+
+          <!-- Save Loading State -->
+          <div
+            class="request-loading"
+            *ngIf="saving"
+            role="status"
+            aria-live="polite">
+            <span class="spinner" aria-hidden="true"></span>
+            {{ editingId === null ? 'Saving employee...' : 'Updating employee...' }}
+          </div>
+
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="cancel-btn"
+              [disabled]="saving"
+              (click)="closeForm()">
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              class="primary-btn"
+              [disabled]="employeeForm.invalid || saving || deleting">
+              {{
+                saving
+                  ? 'Saving...'
+                  : (editingId === null ? 'Save Employee' : 'Update Employee')
+              }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <!-- Custom Delete Warning Dialog -->
+    <div
+      class="modal-backdrop warning-backdrop"
+      *ngIf="showDeleteWarning"
+      (click)="cancelDelete()">
+
+      <section
+        class="modal warning-modal"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="warning-title"
+        (click)="$event.stopPropagation()">
+
+        <div class="modal-heading">
+          <div>
+            <h2 id="warning-title">⚠ Warning</h2>
+            <p>Please confirm this action.</p>
+          </div>
+
+          <button
+            type="button"
+            class="close-btn"
+            aria-label="Close warning"
+            [disabled]="deleting"
+            (click)="cancelDelete()">
+            ×
+          </button>
+        </div>
+
+        <p>
+          Are you sure you want to delete
+          <strong>{{ employeeToDelete?.name }}</strong>?
+        </p>
+
+        <p>This action cannot be undone.</p>
+
+        <!-- Delete API Error -->
+        <div
+          class="error api-error"
+          *ngIf="errorMessage"
+          role="alert">
+          <span aria-hidden="true">⚠️</span>
+          <div class="error-content">
+            <strong>Unable to delete employee</strong>
+            <p>{{ errorMessage }}</p>
+          </div>
+        </div>
+
+        <!-- Delete Loading State -->
+        <div
+          class="request-loading"
+          *ngIf="deleting"
+          role="status"
+          aria-live="polite">
+          <span class="spinner" aria-hidden="true"></span>
+          Deleting employee...
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="cancel-btn"
+            [disabled]="deleting"
+            (click)="cancelDelete()">
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            class="delete-btn"
+            [disabled]="deleting || saving"
+            (click)="confirmDelete()">
+            {{ deleting ? 'Deleting...' : 'Delete Employee' }}
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <footer>EmployeeHub · Employee Management System</footer>
+  </main>
+</div>

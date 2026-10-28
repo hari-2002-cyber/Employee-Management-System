@@ -1,0 +1,21 @@
+
+# Go build files
+backend/*.exe
+backend/*.test
+backend/employee-management-system
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Angular dependencies and build output
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# IDE and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
